@@ -1,0 +1,8 @@
+# Real Wi-Fi credentials - never commit
+Firmware/DeskBuddy/secrets.h
+secrets.h
+
+# Build output
+build/
+*.bin
+*.elf

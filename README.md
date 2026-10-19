@@ -1,6 +1,16 @@
 # Desk Buddy
 
+<p align="center">
+  <img src="deakbuddy.jpeg" alt="Desk Buddy robot with animated OLED eyes" width="420">
+</p>
+
 Desk Buddy is an interactive desktop robot built using an ESP32-C3 Mini. It combines servo-controlled movement, an animated OLED display, multiple expressions and behaviours, automatic operation, and Wi-Fi-based web control.
+
+## Gallery
+
+<p align="center">
+  <img src="deskbuddy.jpeg" alt="Desk Buddy held in hand, side view of the pan/tilt mechanism" width="360">
+</p>
 
 ## Features
 
@@ -16,7 +26,7 @@ Desk Buddy is an interactive desktop robot built using an ESP32-C3 Mini. It comb
 - Left, Center, and Right positioning
 - Automatic random idle behaviour
 - Web-based control from a phone or computer
-- Wi-Fi connectivity
+- Wi-Fi connectivity with automatic reconnect
 - mDNS support using `deskbuddy.local`
 
 ## Expressions and Actions
@@ -166,14 +176,14 @@ USB CDC On Boot = Enabled
 
 ### 4. Configure Wi-Fi
 
-Open the Arduino sketch and configure your Wi-Fi credentials:
+In `Firmware/DeskBuddy/`, copy `secrets.example.h` to `secrets.h` and fill in your Wi-Fi details:
 
 ```cpp
 #define WIFI_SSID_SECRET  "YOUR_WIFI_NAME"
 #define WIFI_PASS_SECRET  "YOUR_WIFI_PASSWORD"
 ```
 
-Do not publish real Wi-Fi credentials in a public GitHub repository.
+`secrets.h` is git-ignored, so your real credentials stay off GitHub.
 
 ### 5. Upload the Firmware
 
@@ -207,16 +217,21 @@ The web interface can then be used to control Desk Buddy.
 Desk-buddy/
 │
 ├── README.md
-├── index.html
-├── circuit-diagram.png
-└── Desk-buddy.ino
+├── Firmware/
+│   └── DeskBuddy/
+│       ├── DeskBuddy.ino        # main sketch (web UI is embedded)
+│       └── secrets.example.h    # copy to secrets.h with your Wi-Fi details
+├── Circuit Diagram/             # wiring diagram
+├── CAD/                         # 3D-printable enclosure and pan/tilt parts
+├── deakbuddy.jpeg               # photo (front, eyes)
+└── deskbuddy.jpeg               # photo (side)
 ```
 
 ## Circuit Diagram
 
 The circuit diagram for Desk Buddy is included in the repository.
 
-![Desk Buddy Circuit Diagram](circuit-diagram.png)
+![Desk Buddy Circuit Diagram](Circuit%20Diagram/a_detailed_infographic_diagram_image_clean_techni.png)
 
 ## Future Improvements
 

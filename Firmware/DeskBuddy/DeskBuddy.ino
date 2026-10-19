@@ -21,8 +21,9 @@
 #include <ESP32Servo.h>
 
 // ---------------- Wi-Fi credentials ----------------
-#define WIFI_SSID_SECRET  "TinkerSpace"
-#define WIFI_PASS_SECRET  "123tinkerspace"
+// Copy secrets.example.h to secrets.h and put your Wi-Fi details there.
+// secrets.h is git-ignored so real credentials never get committed.
+#include "secrets.h"
 
 // Must stay above all functions (Arduino auto-prototype order)
 enum Mood { NORMAL, HAPPY, SLEEPY, ANGRY, SAD, SURPRISED, LOVE, WINK, DIZZY };
@@ -36,6 +37,7 @@ enum Mood { NORMAL, HAPPY, SLEEPY, ANGRY, SAD, SURPRISED, LOVE, WINK, DIZZY };
 // ---------------- Wi-Fi ----------------
 #define WIFI_TIMEOUT_MS 15000
 #define WIFI_LOW_TX     0      // set 1 if the C3 Super Mini won't connect
+#define WIFI_RETRY_MS   10000  // reconnect attempt interval after a drop
 
 // ---------------- Display ----------------
 #define SCR_W     128
@@ -45,7 +47,7 @@ Adafruit_SSD1306 oled(SCR_W, SCR_H, &Wire, -1);
 
 // ---------------- Servo limits ----------------
 const int PAN_MIN = 0, PAN_MAX = 180, PAN_CENTER = 90;
-const int PAN_HOME = 0;                   // base returns here after every mode
+const int PAN_HOME = PAN_CENTER;          // base returns here after every mode
 const int TILT_CENTER = 90;               // head neutral - trim to your mechanics
 const int TILT_UP     = TILT_CENTER + 5;  // swap signs if head moves the wrong way
 const int TILT_DOWN   = TILT_CENTER - 5;  // total travel = 10°
@@ -456,6 +458,33 @@ void handleAuto() {
   server.send(200, "text/plain", autoMode ? "auto: on" : "auto: off");
 }
 
+bool mdnsUp = false;
+
+void startMDNS() {
+  if (mdnsUp) MDNS.end();
+  mdnsUp = MDNS.begin("deskbuddy");
+  if (mdnsUp) MDNS.addService("http", "tcp", 80);
+}
+
+// Called every loop: retries Wi-Fi after a drop without blocking animation
+void maintainWiFi(uint32_t now) {
+  static bool wasConnected = false;
+  static uint32_t lastTry = 0;
+  bool connected = WiFi.status() == WL_CONNECTED;
+
+  if (connected && !wasConnected) {          // just (re)connected
+    WiFi.setSleep(false);
+    startMDNS();
+    Serial.printf("Desk Buddy: open http://%s/\n", WiFi.localIP().toString().c_str());
+  }
+  if (!connected && now - lastTry >= WIFI_RETRY_MS) {
+    lastTry = now;
+    Serial.println("WiFi lost - reconnecting");
+    WiFi.reconnect();
+  }
+  wasConnected = connected;
+}
+
 void connectWiFi() {
   showText("Connecting WiFi...", WIFI_SSID_SECRET);
   WiFi.mode(WIFI_STA);
@@ -467,17 +496,17 @@ void connectWiFi() {
   uint32_t t0 = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - t0 < WIFI_TIMEOUT_MS) delay(250);
 
+  // Server is started regardless, so it works as soon as Wi-Fi (re)connects
+  server.on("/", handleRoot);
+  server.on("/act", handleAct);
+  server.on("/look", handleLook);
+  server.on("/auto", handleAuto);
+  server.begin();
+
   if (WiFi.status() == WL_CONNECTED) {
     WiFi.setSleep(false);            // faster web response
     String ip = WiFi.localIP().toString();
-    Serial.printf("Desk Buddy: open http://%s/\n", ip.c_str());
-    if (MDNS.begin("deskbuddy")) MDNS.addService("http", "tcp", 80);
-
-    server.on("/", handleRoot);
-    server.on("/act", handleAct);
-    server.on("/look", handleLook);
-    server.on("/auto", handleAuto);
-    server.begin();
+    // mDNS is started by maintainWiFi() on the first loop
 
     showText("Open in browser:", ip.c_str());
     delay(4000);
@@ -500,12 +529,14 @@ void setup() {
     while (true) delay(1000);
   }
 
-  connectWiFi();
-
+  // Attach servos first so their signal lines don't float (jitter)
+  // during the Wi-Fi wait
   ESP32PWM::allocateTimer(0);
   ESP32PWM::allocateTimer(1);
   pan.begin(PIN_PAN, PAN_MIN, PAN_MAX, PAN_CENTER);
   tilt.begin(PIN_TILT, TILT_DOWN, TILT_UP, TILT_CENTER);
+
+  connectWiFi();
 
   // Wake-up: start sleepy, open eyes, little happy nod
   setMood(SLEEPY);
@@ -517,10 +548,11 @@ void setup() {
 }
 
 void loop() {
+  uint32_t now = millis();
+  maintainWiFi(now);
   if (WiFi.status() == WL_CONNECTED) server.handleClient();
 
   static uint32_t lastFrame = 0;
-  uint32_t now = millis();
   if (now - lastFrame < FRAME_MS) return;
   lastFrame = now;
 

@@ -1,6 +1,16 @@
 # Desk Buddy
 
+<p align="center">
+  <img src="deakbuddy.jpeg" alt="Desk Buddy robot with animated OLED eyes" width="420">
+</p>
+
 Desk Buddy is an interactive desktop robot built using an ESP32-C3 Mini. It combines servo-controlled movement, an animated OLED display, multiple expressions and behaviours, automatic operation, and Wi-Fi-based web control.
+
+## Gallery
+
+<p align="center">
+  <img src="deskbuddy.jpeg" alt="Desk Buddy held in hand, side view of the pan/tilt mechanism" width="360">
+</p>
 
 ## Features
 
@@ -213,7 +223,8 @@ Desk-buddy/
 │       └── secrets.example.h    # copy to secrets.h with your Wi-Fi details
 ├── Circuit Diagram/             # wiring diagram
 ├── CAD/                         # 3D-printable enclosure and pan/tilt parts
-└── deskbuddy.jpeg               # photo
+├── deakbuddy.jpeg               # photo (front, eyes)
+└── deskbuddy.jpeg               # photo (side)
 ```
 
 ## Circuit Diagram
